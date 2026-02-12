@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 import torch
 import pdfplumber
 from flask import Flask, render_template, request, jsonify
@@ -8,7 +7,6 @@ from transformers import pipeline
 
 # --- 1. SETTINGS & PATHS ---
 NGROK_TOKEN = "2UUGMJW8gaZ7Ikrl53By3xYHdLs_6b3ipRxC3rEXwy7JgQv5Y"
-CSV_PATH = '/content/legal_text_classification.csv'
 UPLOAD_FOLDER = 'uploads'
 
 # Ensure upload directory exists
@@ -17,22 +15,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # --- 2. BACKEND LOGIC (FLASK + BERT) ---
 app = Flask(__name__)
 
-# Extract Labels from your specific CSV path
-if os.path.exists(CSV_PATH):
-    try:
-        df = pd.read_csv(CSV_PATH)
-        if 'case_outcome' in df.columns:
-            LABELS = df['case_outcome'].dropna().unique().tolist()
-            print(f"📊 Dataset Loaded. Classes found: {LABELS}")
-        else:
-            LABELS = ["cited", "applied", "followed", "referred to"]
-            print("⚠️ Column 'case_outcome' not found. Using default labels.")
-    except Exception as e:
-        print(f"❌ Error reading CSV: {e}")
-        LABELS = ["cited", "applied", "followed", "referred to"]
-else:
-    LABELS = ["cited", "applied", "followed", "referred to"]
-    print(f"⚠️ {CSV_PATH} not found. Using default outcomes.")
+# Define clean, standardized labels
+LABELS = ["cited", "applied", "followed", "referred to"]
+print(f"📊 Using legal outcomes: {LABELS}")
 
 # Load AI Model (BART-Large is used for high-accuracy zero-shot)
 device = 0 if torch.cuda.is_available() else -1
@@ -51,11 +36,18 @@ def predict():
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     
+    # Limit text to prevent overload
+    text = text[:4000]
+    
     # BERT Classification
     res = classifier(text, LABELS, multi_label=False)
+    
+    # Clean and format label
+    label = res['labels'][0].lower().strip()
+    
     return jsonify({
-        'label': res['labels'][0],
-        'score': res['scores'][0]
+        'label': label,
+        'score': float(res['scores'][0])
     })
 
 @app.route('/upload', methods=['POST'])
@@ -83,9 +75,13 @@ def upload():
 
         # Run BERT on the first 4000 characters
         res = classifier(extracted_text[:4000], LABELS, multi_label=False)
+        
+        # Clean and format label
+        label = res['labels'][0].lower().strip()
+        
         return jsonify({
-            'label': res['labels'][0],
-            'score': res['scores'][0]
+            'label': label,
+            'score': float(res['scores'][0])
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
