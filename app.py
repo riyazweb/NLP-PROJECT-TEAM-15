@@ -23,7 +23,12 @@ try:
     # Get unique legal categories from the dataset
     # Assuming the CSV has a column like 'label', 'category', or 'class'
     label_column = df.columns[-1]  # Usually last column is the label
-    LABELS = sorted(df[label_column].unique().tolist())
+    
+    # Convert all labels to strings and remove any null/empty values
+    labels_raw = df[label_column].dropna().astype(str).unique().tolist()
+    
+    # Clean up labels - remove empty strings and convert to lowercase
+    LABELS = sorted([label.strip().lower() for label in labels_raw if label.strip() and label.lower() != 'nan'])
     
     print(f"✅ Loaded {len(df)} samples from Kaggle dataset")
     print(f"📊 Legal categories found: {LABELS}")
