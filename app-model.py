@@ -57,11 +57,26 @@ except Exception:
 if MODEL_LABELS:
     LABELS = MODEL_LABELS
 
+def get_label_meaning(label):
+    meanings = {
+        'cited': 'This case is mentioned as a reference in another case.',
+        'applied': 'This case rule is directly used to decide the current case.',
+        'followed': 'The court follows the same reasoning used in this case.',
+        'referred to': 'This case is mentioned for background context.'
+    }
+    return meanings.get(label, 'This label shows how this case is used in legal judgments.')
+
 def safe_text_for_model(text, max_tokens=256):
     if not text:
         return ""
     encoded = classifier.tokenizer(text, truncation=True, max_length=max_tokens)
     return classifier.tokenizer.decode(encoded["input_ids"], skip_special_tokens=True)
+
+def token_count(text, max_tokens=256):
+    if not text:
+        return 0
+    encoded = classifier.tokenizer(text, truncation=True, max_length=max_tokens)
+    return len(encoded.get("input_ids", []))
 
 @app.route('/')
 def home():
@@ -112,6 +127,7 @@ def predict():
         return jsonify({'error': 'No text provided'}), 400
 
     safe_text = safe_text_for_model(text, max_tokens=256)
+    used_tokens = token_count(text, max_tokens=256)
 
     try:
         # Predict with trained model
@@ -123,12 +139,22 @@ def predict():
     label = str(res.get('label', 'unknown')).lower().strip()
     score = float(res.get('score', 0.0))
     confidence = score * 100
+    meaning = get_label_meaning(label)
     
     return jsonify({
         'label': label,
         'confidence': f"{confidence:.2f}%",
         'score': score,
-        'all_categories': LABELS
+        'all_categories': LABELS,
+        'label_meaning': meaning,
+        'result_summary': f"Prediction: {label.upper()} with {confidence:.2f}% confidence.",
+        'result_details': {
+            'input_type': 'text',
+            'input_characters': len(text),
+            'processed_tokens': used_tokens,
+            'model_path': MODEL_DIR,
+            'total_categories': len(LABELS)
+        }
     })
 
 @app.route('/upload', methods=['POST'])
@@ -162,6 +188,7 @@ def upload():
             return jsonify({'error': 'Could not extract text from file'}), 400
 
         safe_text = safe_text_for_model(extracted_text, max_tokens=256)
+        used_tokens = token_count(extracted_text, max_tokens=256)
 
         try:
             # Predict with trained model
@@ -173,13 +200,24 @@ def upload():
         label = str(res.get('label', 'unknown')).lower().strip()
         score = float(res.get('score', 0.0))
         confidence = score * 100
+        meaning = get_label_meaning(label)
         
         return jsonify({
             'label': label,
             'confidence': f"{confidence:.2f}%",
             'score': score,
             'text_preview': extracted_text[:200] + "...",  # Show first 200 chars
-            'all_categories': LABELS
+            'all_categories': LABELS,
+            'label_meaning': meaning,
+            'result_summary': f"Prediction: {label.upper()} with {confidence:.2f}% confidence.",
+            'result_details': {
+                'input_type': 'file',
+                'file_name': file.filename,
+                'input_characters': len(extracted_text),
+                'processed_tokens': used_tokens,
+                'model_path': MODEL_DIR,
+                'total_categories': len(LABELS)
+            }
         })
     except Exception as e:
         return jsonify({'error': f'Error processing file: {str(e)}'}), 500
