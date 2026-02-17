@@ -1,0 +1,128 @@
+========================================
+LEGAL TEXT CLASSIFICATION - TESTING GUIDE
+========================================
+
+📌 WHAT THIS PROJECT DOES:
+- Reads legal documents (text or PDF)
+- Uses BERT AI to understand the text
+- Classifies it into categories from Kaggle dataset
+- Shows you the result with confidence score
+
+========================================
+🚀 HOW TO RUN:
+========================================
+
+1. Open PowerShell in this folder
+2. Run: python app.py
+3. Wait for it to load (you'll see a public URL)
+4. Copy the URL and open it in your browser
+
+========================================
+🧪 HOW TO TEST:
+========================================
+
+METHOD 1: Get Sample Texts
+---------------------------
+1. Go to: YOUR_URL/samples
+2. You'll see 4 sample legal texts
+3. Copy any sample text
+4. Use it in the main page
+
+METHOD 2: Type Your Own Text
+---------------------------
+1. Go to the main page
+2. Type or paste legal text in the text box
+3. Click "Classify"
+4. See the result!
+
+METHOD 3: Upload a File
+---------------------------
+1. Upload a PDF or text file
+2. System will extract text automatically
+3. Shows you the classification
+
+========================================
+📝 SAMPLE INPUTS TO TRY:
+========================================
+
+Sample 1 - Citation:
+"In the case of Smith v. Jones (2020), the court cited the precedent set in Brown v. Board of Education regarding constitutional rights."
+
+Sample 2 - Application:
+"The court applied the doctrine of res judicata, determining that the matter had already been adjudicated in a prior proceeding."
+
+Sample 3 - Following Precedent:
+"Following the established precedent in Miranda v. Arizona, the court ruled that the defendant's rights were violated."
+
+Sample 4 - Reference:
+"The judgment referred to multiple international conventions including the Geneva Convention."
+
+========================================
+📊 UNDERSTANDING RESULTS:
+========================================
+
+When you submit text, you'll get:
+✅ Label: The category (like "cited", "applied", etc.)
+✅ Confidence: How sure the AI is (like 95.67%)
+✅ All Categories: List of possible categories from dataset
+
+Example Result:
+{
+  "label": "cited",
+  "confidence": "95.67%",
+  "all_categories": ["cited", "applied", "followed", "referred to"]
+}
+
+========================================
+❓ TROUBLESHOOTING:
+========================================
+
+Problem: "Could not load CSV"
+Solution: Make sure legal_text_classification.csv is in the same folder
+
+Problem: "No text provided"
+Solution: Make sure you typed something in the text box
+
+Problem: Model loading takes time
+Solution: First time always takes longer. Be patient!
+
+Problem: Low confidence score
+Solution: Try more specific legal text with clear keywords
+
+========================================
+📂 PROJECT FILES:
+========================================
+
+app.py - Main Python code (brain of the system)
+legal_text_classification.csv - Kaggle dataset with legal categories
+templates/index.html - Web interface (front page)
+uploads/ - Temporary folder for uploaded files
+
+========================================
+🎯 PROJECT EXPLANATION (SIMPLE):
+========================================
+
+1. DATA SOURCE: Uses Kaggle legal classification dataset
+2. AI MODEL: BERT (understands text like a human)
+3. PROCESS: 
+   - Read CSV → Get categories
+   - Load BERT model → AI brain ready
+   - User sends text → BERT analyzes
+   - BERT picks category → Show result
+4. OUTPUT: Category name + confidence score
+
+========================================
+👥 FOR PROJECT PRESENTATION:
+========================================
+
+What to Say:
+"Our system uses a Kaggle legal dataset with BERT AI to automatically classify legal documents. Just input any legal text, and it tells you what type it is - like if it's a citation, application, or reference. The BERT model achieves high accuracy by understanding the context and meaning of legal language."
+
+Key Points:
+✓ Uses real Kaggle dataset (not hardcoded)
+✓ BERT AI for accurate classification
+✓ Works with text input or PDF upload
+✓ Shows confidence score
+✓ Easy web interface
+
+========================================
