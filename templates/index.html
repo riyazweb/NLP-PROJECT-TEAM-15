@@ -1,228 +1,130 @@
- 
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Legal AI - Case Outcome Predictor</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<title>Legal Case Classifier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
-<script>
-    tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: { "primary": "#137fec", "background-light": "#ffffff", "background-dark": "#101922" },
-                fontFamily: { "display": ["Inter", "sans-serif"] },
-                backgroundImage: {
-                    'rainbow-gradient': 'linear-gradient(90deg, #EF4444 0%, #F97316 20%, #EAB308 40%, #22C55E 60%, #3B82F6 80%, #A855F7 100%)',
-                    'rainbow-subtle': 'linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 22, 0.1) 20%, rgba(234, 179, 8, 0.1) 40%, rgba(34, 197, 94, 0.1) 60%, rgba(59, 130, 246, 0.1) 80%, rgba(168, 85, 247, 0.1) 100%)',
-                }
-            },
-        },
-    }
-</script>
 <style>
     body { font-family: 'Inter', sans-serif; }
-    .fade-in-up { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; transform: translateY(20px); }
-    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-    .text-gradient-rainbow { background: linear-gradient(90deg, #EF4444, #F97316, #EAB308, #22C55E, #3B82F6, #A855F7); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .bg-gradient-rainbow { background: linear-gradient(90deg, #EF4444, #F97316, #EAB308, #22C55E, #3B82F6, #A855F7); }
-    .status-card-purple { background-color: #FAF5FF; border: 1px solid #E9D5FF; color: #9333EA; }
-    .status-card-green { background-color: #F0FDF4; border: 1px solid #BBF7D0; color: #16A34A; }
-    .loader { border: 3px solid #f3f3f3; border-top: 3px solid #A855F7; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+    .loader { border: 3px solid #f1f5f9; border-top: 3px solid #4f46e5; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .shadow-soft { box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08); }
 </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 min-h-screen font-display flex flex-col antialiased">
+<body class="bg-slate-50 text-slate-800 min-h-screen">
 
-<nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-        <div class="flex items-center gap-2 group cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-gradient-rainbow flex items-center justify-center text-white"><span class="material-icons text-lg">balance</span></div>
-            <span class="font-semibold text-lg tracking-tight group-hover:text-gradient-rainbow transition-all">Legal AI</span>
-        </div>
-        <a class="px-5 py-2 rounded-full text-white bg-gradient-rainbow text-sm font-medium shadow-md" href="#how-it-works">How It Works</a>
+<header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <h1 class="text-lg sm:text-xl font-semibold flex items-center gap-2">
+            <span class="material-icons text-indigo-600">gavel</span>
+            Legal Case Result Predictor
+        </h1>
+        <a href="#meanings" class="text-sm text-indigo-600 font-medium">Meaning Guide</a>
     </div>
-</nav>
+</header>
 
-<main class="flex-grow flex flex-col items-center pt-12 pb-20 px-4">
-    <div class="text-center max-w-3xl mb-12 fade-in-up">
-        <div class="inline-flex items-center px-3 py-1 rounded-full bg-rainbow-subtle text-purple-600 text-xs font-medium mb-6 border border-purple-100">
-            <span class="w-2 h-2 rounded-full bg-gradient-rainbow mr-2 animate-pulse"></span> AI-Powered Legal Analysis
+<main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <section class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
+        <h2 class="text-xl font-semibold">Enter Case Details</h2>
+        <p class="text-sm text-slate-600 mt-1">Paste legal text or upload a file. The app will show a predicted legal usage label and confidence.</p>
+
+        <div class="mt-4 flex border border-slate-200 rounded-lg overflow-hidden">
+            <button id="tabText" onclick="switchTab('text')" class="flex-1 py-2.5 text-sm font-semibold bg-indigo-50 text-indigo-700">Text Input</button>
+            <button id="tabFile" onclick="switchTab('file')" class="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-white">File Upload</button>
         </div>
-        <h1 class="text-4xl sm:text-6xl font-bold tracking-tight mb-6">Predict Legal Case <span class="text-gradient-rainbow">Outcomes</span></h1>
-        <p class="text-lg text-slate-500 max-w-2xl mx-auto">Enter your legal case text or upload a document, and our AI will predict the likely outcome instantly.</p>
-    </div>
 
-    <!-- Input Box -->
-    <div class="w-full max-w-[900px] bg-white rounded-2xl shadow-soft border border-slate-200 overflow-hidden fade-in-up">
-        <div class="h-1 w-full bg-gradient-rainbow"></div>
-        <div class="flex border-b border-slate-100">
-            <button onclick="switchTab('text')" id="tabText" class="flex-1 py-4 text-sm font-semibold border-b-2 border-purple-500 text-purple-600">Text Analysis</button>
-            <button onclick="switchTab('file')" id="tabFile" class="flex-1 py-4 text-sm font-medium text-slate-500">File Upload</button>
+        <div id="textInputArea" class="mt-4">
+            <textarea id="caseInput" class="w-full h-52 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-200" placeholder="Paste legal text here..."></textarea>
         </div>
-        
-        <div class="p-6 sm:p-8">
-            <!-- Text Input Area -->
-            <div id="textInputArea">
-                <textarea id="caseInput" class="w-full h-64 p-4 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all" placeholder="Paste legal text here..."></textarea>
-            </div>
 
-            <!-- File Upload Area (Hidden by default) -->
-            <div id="fileInputArea" class="hidden">
-                <div onclick="document.getElementById('fileSelector').click()" class="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center hover:bg-slate-50 cursor-pointer">
-                    <div class="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mb-4"><span class="material-icons text-3xl text-purple-500">upload_file</span></div>
-                    <p class="text-slate-700 font-medium" id="fileNameDisplay">Click to upload or drag and drop</p>
-                    <p class="text-sm text-slate-500">PDF or TXT (MAX. 10MB)</p>
-                    <input type="file" id="fileSelector" class="hidden" accept=".pdf,.txt" onchange="handleFileSelect(this)">
-                </div>
-            </div>
-
-            <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div class="text-sm text-slate-500 flex items-center"><span class="material-icons text-green-500 text-base mr-1">verified_user</span> Secure & Private</div>
-                <button onclick="startAnalysis()" id="analyzeBtn" class="w-full sm:w-auto px-8 py-3 bg-gradient-rainbow text-white font-bold rounded-lg shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center">
-                    <span id="btnText">Analyze Now</span>
-                    <span id="btnLoader" class="loader ml-2 hidden"></span>
-                </button>
-            </div>
-            <div id="statusBox" class="hidden mt-4 text-sm px-4 py-3 rounded-lg"></div>
+        <div id="fileInputArea" class="mt-4 hidden">
+            <label for="fileSelector" class="block border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:bg-slate-50">
+                <span class="material-icons text-3xl text-indigo-600">upload_file</span>
+                <p id="fileNameDisplay" class="mt-2 text-sm font-medium">Click to choose PDF or TXT file</p>
+                <input type="file" id="fileSelector" class="hidden" accept=".pdf,.txt" onchange="handleFileSelect(this)">
+            </label>
         </div>
-    </div>
 
-    <!-- Results -->
-    <div id="resultSection" class="w-full max-w-[900px] hidden mt-12 fade-in-up">
-        <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><span class="material-icons text-purple-500">task_alt</span> Your Results</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-1 bg-white rounded-xl p-8 shadow-sm border border-slate-200 flex flex-col items-center justify-center relative">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-rainbow"></div>
-                <p class="text-sm font-medium text-slate-500 mb-6">Confidence Level</p>
-                <div class="relative w-36 h-36 flex items-center justify-center mb-6">
-                    <svg class="w-full h-full transform -rotate-90">
-                        <circle class="text-slate-100" cx="72" cy="72" fill="transparent" r="64" stroke="currentColor" stroke-width="10"></circle>
-                        <circle id="progressCircle" class="transition-all duration-1000" cx="72" cy="72" fill="transparent" r="64" stroke="url(#rainbow)" stroke-dasharray="0" stroke-dashoffset="0" stroke-linecap="round" stroke-width="10"></circle>
-                        <defs><linearGradient id="rainbow" x1="0%" x2="100%"><stop offset="0%" stop-color="#EF4444"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center font-bold text-4xl text-purple-600" id="scoreVal">0%</div>
-                </div>
-                <div class="bg-gradient-rainbow text-white px-6 py-3 rounded-full">
-                    <h3 class="text-xl font-bold uppercase" id="resultLabel">--</h3>
-                </div>
-            </div>
-            <div class="md:col-span-2 bg-white rounded-xl p-8 shadow-sm border border-slate-200">  
-                <h3 class="font-bold text-lg text-slate-800 mb-4">What This Means</h3>
-                <div class="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 mb-6">
-                    <span class="material-icons text-2xl text-green-600">info</span>
-                    <div>
-                        <p class="text-slate-700 leading-relaxed mb-2">This case is likely to be <span id="descLabel" class="font-bold text-green-700 uppercase"></span></p>
-                        <p id="explanationText" class="text-slate-600 text-sm leading-relaxed">Our AI analyzed the text and compared it with thousands of legal documents to make this prediction.</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 text-sm text-slate-500">
-                    <span class="material-icons text-base">verified</span>
-                    <span>Analyzed using advanced AI technology</span>
-                </div>
-            </div>
+        <div class="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div id="statusBox" class="hidden text-sm px-3 py-2 rounded-lg"></div>
+            <button id="analyzeBtn" onclick="startAnalysis()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 inline-flex items-center justify-center gap-2">
+                <span id="btnText">Analyze Result</span>
+                <span id="btnLoader" class="loader hidden"></span>
+            </button>
         </div>
-    </div>
+    </section>
 
-    <!-- Help Guide Section -->
-    <div id="how-it-works" class="w-full max-w-[900px] mt-16 mb-8">
-        <h2 class="text-2xl font-bold mb-6 text-center">📚 Understanding Your Results</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-blue-500">
-                <h3 class="font-bold text-lg mb-2 text-blue-700">CITED</h3>
-                <p class="text-slate-600">The case is mentioned as a reference or authority, but not followed in detail. Like saying "this similar case exists."</p>
+    <section id="resultSection" class="hidden bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
+        <h2 class="text-xl font-semibold mb-4">Prediction Result</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                <p class="text-xs text-slate-500">Predicted Label</p>
+                <p id="resultLabel" class="text-2xl font-bold mt-1 text-indigo-700">--</p>
+                <p id="resultSummary" class="text-sm text-slate-600 mt-2">--</p>
             </div>
-            
-            <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-green-500">
-                <h3 class="font-bold text-lg mb-2 text-green-700">APPLIED</h3>
-                <p class="text-slate-600">The legal principles from this case are directly used to make a decision. The rules from the case are actively put into practice.</p>
-            </div>
-            
-            <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-purple-500">
-                <h3 class="font-bold text-lg mb-2 text-purple-700">FOLLOWED</h3>
-                <p class="text-slate-600">The court agrees with and follows the same reasoning as the previous case. It's a strong endorsement of that case's decision.</p>
-            </div>
-            
-            <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-orange-500">
-                <h3 class="font-bold text-lg mb-2 text-orange-700">REFERRED TO</h3>
-                <p class="text-slate-600">The case is mentioned for context or background information, but doesn't directly impact the decision being made.</p>
+
+            <div class="border border-slate-200 rounded-lg p-4">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-600">Confidence</span>
+                    <span id="scoreVal" class="font-semibold">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 h-3 rounded-full mt-2">
+                    <div id="confidenceBar" class="bg-indigo-600 h-3 rounded-full" style="width:0%"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Raw score: <span id="rawScore">0.0000</span></p>
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 border border-purple-200 mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-purple-800">🚀 How to Use This App</h2>
-            
-            <div class="space-y-4">
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
-                    <div>
-                        <h4 class="font-semibold text-slate-800">Choose Your Input Method</h4>
-                        <p class="text-slate-600">Click "Text Analysis" to paste text directly, or "File Upload" to upload a PDF/TXT file.</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
-                    <div>
-                        <h4 class="font-semibold text-slate-800">Enter Your Legal Text</h4>
-                        <p class="text-slate-600">Paste the legal case description, judgment, or argument you want to analyze.</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
-                    <div>
-                        <h4 class="font-semibold text-slate-800">Click "Analyze Now"</h4>
-                        <p class="text-slate-600">Our AI will process your text and predict the outcome within seconds.</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">4</div>
-                    <div>
-                        <h4 class="font-semibold text-slate-800">Review Your Results</h4>
-                        <p class="text-slate-600">See the predicted outcome with a confidence percentage showing how certain the AI is.</p>
-                    </div>
-                </div>
-            </div>
+        <div class="mt-4 border border-indigo-100 bg-indigo-50 rounded-lg p-4">
+            <p class="text-sm font-semibold text-indigo-800">What this label means</p>
+            <p id="meaningText" class="text-sm text-slate-700 mt-1">--</p>
         </div>
 
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-slate-200">
-            <h3 class="text-xl font-bold mb-4 text-slate-800">💡 Example Usage</h3>
-            
-            <div class="bg-slate-50 rounded-lg p-5 mb-4">
-                <p class="text-sm font-semibold text-slate-600 mb-2">Sample Text:</p>
-                <p class="text-slate-700 italic">"The defendant's actions constitute a clear breach of contract. Similar to the precedent set in Smith v. Johnson, where the court held that failure to deliver goods within the agreed timeframe constitutes material breach..."</p>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border border-slate-200 rounded-lg p-4">
+                <p class="text-sm font-semibold">Result Data</p>
+                <ul class="text-sm text-slate-700 mt-2 space-y-1">
+                    <li>Input type: <span id="detailInputType">-</span></li>
+                    <li>Characters: <span id="detailChars">-</span></li>
+                    <li>Processed tokens: <span id="detailTokens">-</span></li>
+                    <li>Total categories: <span id="detailCategories">-</span></li>
+                </ul>
             </div>
-            
-            <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <span class="material-icons text-green-600">check_circle</span>
-                <div>
-                    <p class="font-semibold text-green-800">Expected Result: CITED or APPLIED</p>
-                    <p class="text-sm text-slate-600">The text references a previous case, so it will likely be classified as cited or applied depending on how the precedent is used.</p>
-                </div>
+            <div class="border border-slate-200 rounded-lg p-4">
+                <p class="text-sm font-semibold">Text Preview</p>
+                <p id="previewText" class="text-sm text-slate-700 mt-2 leading-relaxed">Preview will appear here after file analysis.</p>
             </div>
         </div>
-    </div>
+    </section>
+
+    <section id="meanings" class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
+        <h2 class="text-xl font-semibold mb-4">Simple Meaning Guide</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="border-l-4 border-blue-500 bg-blue-50 p-3 rounded-r-lg">
+                <p class="font-semibold text-blue-800">CITED</p>
+                <p class="text-slate-700">This case is mentioned as a reference in another judgment.</p>
+            </div>
+            <div class="border-l-4 border-green-500 bg-green-50 p-3 rounded-r-lg">
+                <p class="font-semibold text-green-800">APPLIED</p>
+                <p class="text-slate-700">The legal rule from this case is directly used in the current decision.</p>
+            </div>
+            <div class="border-l-4 border-purple-500 bg-purple-50 p-3 rounded-r-lg">
+                <p class="font-semibold text-purple-800">FOLLOWED</p>
+                <p class="text-slate-700">The court follows the same reasoning used in this earlier case.</p>
+            </div>
+            <div class="border-l-4 border-amber-500 bg-amber-50 p-3 rounded-r-lg">
+                <p class="font-semibold text-amber-800">REFERRED TO</p>
+                <p class="text-slate-700">This case is mentioned for background, not used as the main rule.</p>
+            </div>
+        </div>
+    </section>
 </main>
 
 <script>
     let activeTab = 'text';
-    const CIRCLE_RADIUS = 64;
-    const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
-
-    function setScoreCircle(scorePct, animate = true) {
-        const safePct = Math.max(0, Math.min(100, Number(scorePct) || 0));
-        const circle = document.getElementById('progressCircle');
-        circle.style.transition = animate ? 'stroke-dashoffset 1000ms ease' : 'none';
-        circle.style.strokeDasharray = CIRCLE_CIRCUMFERENCE;
-        circle.style.strokeDashoffset = CIRCLE_CIRCUMFERENCE * (1 - safePct / 100);
-        document.getElementById('scoreVal').innerText = safePct + "%";
-    }
 
     function switchTab(tab) {
         activeTab = tab;
@@ -231,34 +133,34 @@
         const textArea = document.getElementById('textInputArea');
         const fileArea = document.getElementById('fileInputArea');
 
-        if(tab === 'text') {
-            textBtn.classList.add('border-purple-500', 'text-purple-600');
-            fileBtn.classList.remove('border-purple-500', 'text-purple-600');
+        if (tab === 'text') {
+            textBtn.className = 'flex-1 py-2.5 text-sm font-semibold bg-indigo-50 text-indigo-700';
+            fileBtn.className = 'flex-1 py-2.5 text-sm font-medium text-slate-600 bg-white';
             textArea.classList.remove('hidden');
             fileArea.classList.add('hidden');
         } else {
-            fileBtn.classList.add('border-purple-500', 'text-purple-600');
-            textBtn.classList.remove('border-purple-500', 'text-purple-600');
+            fileBtn.className = 'flex-1 py-2.5 text-sm font-semibold bg-indigo-50 text-indigo-700';
+            textBtn.className = 'flex-1 py-2.5 text-sm font-medium text-slate-600 bg-white';
             fileArea.classList.remove('hidden');
             textArea.classList.add('hidden');
         }
     }
 
     function handleFileSelect(input) {
-        if(input.files && input.files[0]) {
+        if (input.files && input.files[0]) {
             document.getElementById('fileNameDisplay').innerText = input.files[0].name;
         }
     }
 
-    function showStatus(message, type = 'info') {
+    function showStatus(message, type='info') {
         const box = document.getElementById('statusBox');
-        box.className = 'mt-4 text-sm px-4 py-3 rounded-lg';
+        box.className = 'text-sm px-3 py-2 rounded-lg';
         if (type === 'error') {
-            box.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-700');
+            box.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
         } else if (type === 'success') {
-            box.classList.add('bg-green-50', 'border', 'border-green-200', 'text-green-700');
+            box.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-200');
         } else {
-            box.classList.add('bg-slate-50', 'border', 'border-slate-200', 'text-slate-700');
+            box.classList.add('bg-slate-100', 'text-slate-700', 'border', 'border-slate-200');
         }
         box.textContent = message;
         box.classList.remove('hidden');
@@ -270,99 +172,91 @@
         box.textContent = '';
     }
 
+    function updateMeaning(label, apiMeaning) {
+        if (apiMeaning) return apiMeaning;
+        const meanings = {
+            cited: 'This case is mentioned as a reference in another case.',
+            applied: 'This case rule is directly used to decide the current case.',
+            followed: 'The court follows the same reasoning used in this case.',
+            'referred to': 'This case is mentioned for background context.'
+        };
+        return meanings[label] || 'This label shows how this case is used in legal judgments.';
+    }
+
+    function renderResult(data) {
+        const scorePct = Math.max(0, Math.min(100, Math.round((Number(data.score) || 0) * 100)));
+        const labelText = (data.label || 'unknown').toUpperCase();
+        const details = data.result_details || {};
+
+        document.getElementById('resultLabel').innerText = labelText;
+        document.getElementById('resultSummary').innerText = data.result_summary || `Prediction: ${labelText}`;
+        document.getElementById('scoreVal').innerText = `${scorePct}%`;
+        document.getElementById('rawScore').innerText = (Number(data.score) || 0).toFixed(4);
+        document.getElementById('confidenceBar').style.width = `${scorePct}%`;
+        document.getElementById('meaningText').innerText = updateMeaning((data.label || '').toLowerCase(), data.label_meaning);
+
+        document.getElementById('detailInputType').innerText = details.input_type || '-';
+        document.getElementById('detailChars').innerText = details.input_characters ?? '-';
+        document.getElementById('detailTokens').innerText = details.processed_tokens ?? '-';
+        document.getElementById('detailCategories').innerText = details.total_categories ?? (data.all_categories ? data.all_categories.length : '-');
+
+        document.getElementById('previewText').innerText = data.text_preview || 'No preview for direct text input.';
+        document.getElementById('resultSection').classList.remove('hidden');
+    }
+
     async function startAnalysis() {
         const btnText = document.getElementById('btnText');
         const loader = document.getElementById('btnLoader');
-        const resSec = document.getElementById('resultSection');
         const analyzeBtn = document.getElementById('analyzeBtn');
-        
+        const resultSection = document.getElementById('resultSection');
+
         clearStatus();
-        setScoreCircle(0, false);
-        btnText.innerText = "Analyzing...";
+        resultSection.classList.add('hidden');
+        btnText.innerText = 'Analyzing...';
         loader.classList.remove('hidden');
         analyzeBtn.disabled = true;
-        analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
-        resSec.classList.add('hidden');
-
-        let response;
 
         try {
-            if(activeTab === 'text') {
+            let response;
+            if (activeTab === 'text') {
                 const text = document.getElementById('caseInput').value.trim();
-                if(!text) { showStatus('Please enter legal text before analyzing.', 'error'); return; }
+                if (!text) {
+                    showStatus('Please enter legal text first.', 'error');
+                    return;
+                }
                 response = await fetch('/predict', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({text: text})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
                 });
             } else {
                 const file = document.getElementById('fileSelector').files[0];
-                if(!file) { showStatus('Please select a PDF or TXT file first.', 'error'); return; }
+                if (!file) {
+                    showStatus('Please choose a PDF or TXT file first.', 'error');
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('file', file);
                 response = await fetch('/upload', { method: 'POST', body: formData });
             }
 
             const data = await response.json();
-            if(!response.ok || data.error) {
+            if (!response.ok || data.error) {
                 showStatus(data.error || 'Analysis failed. Please try again.', 'error');
                 return;
             }
 
-            const labelText = (data.label || '--').trim().toUpperCase();
-            let scorePct = 0;
-            if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
-                scorePct = Math.round(data.score * 100);
-            } else if (typeof data.score === 'string' && data.score.trim() !== '') {
-                const parsed = Number(data.score);
-                if (!Number.isNaN(parsed)) {
-                    scorePct = parsed <= 1 ? Math.round(parsed * 100) : Math.round(parsed);
-                }
-            } else if (typeof data.confidence === 'string') {
-                const match = data.confidence.match(/[\d.]+/);
-                if (match) scorePct = Math.round(Number(match[0]));
-            }
-            scorePct = Math.max(0, Math.min(100, scorePct));
-
-            document.getElementById('resultLabel').innerText = labelText;
-            document.getElementById('descLabel').innerText = labelText;
-            updateExplanation((data.label || '').toLowerCase());
-            setScoreCircle(scorePct, true);
-
-            resSec.classList.remove('hidden');
-            showStatus('Analysis completed successfully.', 'success');
-            setTimeout(() => {
-                resSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 100);
-        } catch (err) {
-            showStatus('Network error. Check server connection and try again.', 'error');
+            renderResult(data);
+            showStatus('Done! Result generated successfully.', 'success');
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (e) {
+            showStatus('Network/server error. Please try again.', 'error');
         } finally {
-            resetBtn();
+            btnText.innerText = 'Analyze Result';
+            loader.classList.add('hidden');
+            analyzeBtn.disabled = false;
         }
     }
-
-    function updateExplanation(label) {
-        const explanations = {
-            'cited': 'This case is mentioned as a reference or authority in other legal decisions.',
-            'applied': 'The legal principles from this case are directly used to make decisions in similar situations.',
-            'followed': 'Courts agree with and follow the same reasoning established by this case.',
-            'referred to': 'This case is mentioned for context or background information in legal discussions.'
-        };
-        
-        const explanationText = explanations[label] || 'This case has legal significance based on its usage in similar cases.';
-        document.getElementById('explanationText').innerText = explanationText;
-    }
-
-    function resetBtn() {
-        document.getElementById('btnText').innerText = "Analyze Now";
-        document.getElementById('btnLoader').classList.add('hidden');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        analyzeBtn.disabled = false;
-        analyzeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        setScoreCircle(0, false);
-    });
 </script>
-</body></html>
+</body>
+</html>
