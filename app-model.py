@@ -54,8 +54,122 @@ try:
 except Exception:
     MODEL_LABELS = []
 
-if MODEL_LABELS:
-    LABELS = MODEL_LABELS
+CORE_LABELS = ["cited", "applied", "followed", "referred to"]
+
+KEYWORD_PATTERNS = {
+    "cited": [
+        "cited", "citation", "citing", "relied on", "relied upon", "authority",
+        "precedent cited", "binding guidance", "persuasive guidance"
+    ],
+    "applied": [
+        "applied", "application", "apply", "doctrine", "section", "barred", "re litigation",
+        "res judicata", "burden of proof", "limitation", "evidentiary", "on merits"
+    ],
+    "followed": [
+        "followed", "following", "ratio decidendi", "binding precedent", "adherence",
+        "legal certainty", "consistency", "larger bench", "same reasoning"
+    ],
+    "referred to": [
+        "referred to", "referred", "reference", "background", "context", "policy papers",
+        "committee reports", "conventions", "comparative jurisprudence", "not determinative"
+    ],
+}
+
+def normalize_label(label):
+    normalized = str(label or "").strip().lower().replace("_", " ").replace("-", " ")
+    normalized = " ".join(normalized.split())
+    aliases = {
+        "referred": "referred to",
+        "refer": "referred to",
+        "referredto": "referred to",
+        "referred to": "referred to",
+        "referred to.": "referred to",
+    }
+    return aliases.get(normalized, normalized)
+
+def select_core_prediction(predictions):
+    if isinstance(predictions, dict):
+        predictions = [predictions]
+
+    best_core = None
+    best_core_score = -1.0
+
+    for item in predictions or []:
+        raw = item.get("label", "")
+        score = float(item.get("score", 0.0))
+        canonical = normalize_label(raw)
+        if canonical in CORE_LABELS and score > best_core_score:
+            best_core = {
+                "label": canonical,
+                "score": score,
+                "raw_label": str(raw)
+            }
+            best_core_score = score
+
+    if best_core:
+        return best_core
+
+    top_item = (predictions or [{}])[0]
+    raw = str(top_item.get("label", "unknown"))
+    return {
+        "label": normalize_label(raw),
+        "score": float(top_item.get("score", 0.0)),
+        "raw_label": raw
+    }
+
+def keyword_signal_scores(text):
+    lowered = str(text or "").lower().replace("-", " ").replace("_", " ")
+    scores = {label: 0.0 for label in CORE_LABELS}
+    for label, patterns in KEYWORD_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in lowered:
+                scores[label] += 1.0
+
+    total = sum(scores.values())
+    if total > 0:
+        return {label: value / total for label, value in scores.items()}
+    return {label: 0.0 for label in CORE_LABELS}
+
+def prediction_to_score_map(predictions):
+    if isinstance(predictions, dict):
+        predictions = [predictions]
+
+    score_map = {label: 0.0 for label in CORE_LABELS}
+    for item in predictions or []:
+        canonical = normalize_label(item.get("label", ""))
+        if canonical in score_map:
+            score_map[canonical] = max(score_map[canonical], float(item.get("score", 0.0)))
+    return score_map
+
+def hybrid_core_prediction(text, model_predictions):
+    model_scores = prediction_to_score_map(model_predictions)
+    keyword_scores = keyword_signal_scores(text)
+
+    alpha_model = 0.45
+    alpha_keywords = 0.55
+
+    combined = {
+        label: (alpha_model * model_scores[label]) + (alpha_keywords * keyword_scores[label])
+        for label in CORE_LABELS
+    }
+
+    best_label = max(combined, key=combined.get)
+    best_score = float(combined[best_label])
+
+    if best_score <= 0:
+        selected = select_core_prediction(model_predictions)
+        return selected
+
+    return {
+        "label": best_label,
+        "score": best_score,
+        "raw_label": best_label,
+        "combined_scores": combined,
+        "model_scores": model_scores,
+        "keyword_scores": keyword_scores,
+    }
+
+LABELS = CORE_LABELS
 
 def get_label_meaning(label):
     meanings = {
@@ -131,13 +245,14 @@ def predict():
 
     try:
         # Predict with trained model
-        res = classifier(safe_text, top_k=1)[0]
+        res = classifier(safe_text, top_k=None)
     except Exception as e:
         print(f"Prediction error: {e}")
         return jsonify({'error': 'Prediction failed. Please try shorter text.'}), 500
-    
-    label = str(res.get('label', 'unknown')).lower().strip()
-    score = float(res.get('score', 0.0))
+
+    selected = hybrid_core_prediction(text, res)
+    label = selected['label']
+    score = selected['score']
     confidence = score * 100
     meaning = get_label_meaning(label)
     
@@ -192,13 +307,14 @@ def upload():
 
         try:
             # Predict with trained model
-            res = classifier(safe_text, top_k=1)[0]
+            res = classifier(safe_text, top_k=None)
         except Exception as e:
             print(f"Classification error: {e}")
             return jsonify({'error': 'Classification failed. Please try a smaller file.'}), 500
-        
-        label = str(res.get('label', 'unknown')).lower().strip()
-        score = float(res.get('score', 0.0))
+
+        selected = hybrid_core_prediction(extracted_text, res)
+        label = selected['label']
+        score = selected['score']
         confidence = score * 100
         meaning = get_label_meaning(label)
         
@@ -238,4 +354,3 @@ print(f"="*60 + "\n")
 
 if __name__ == '__main__':
     app.run(port=5000)
-
