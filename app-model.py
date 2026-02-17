@@ -10,7 +10,7 @@ from transformers import pipeline
 NGROK_TOKEN = "2UUGMJW8gaZ7Ikrl53By3xYHdLs_6b3ipRxC3rEXwy7JgQv5Y"
 UPLOAD_FOLDER = 'uploads'
 CSV_PATH = '/content/NLP-PROJECT-TEAM-15/legal-text-classification-dataset/legal_text_classification.csv'  # Kaggle dataset (in same folder)
-MODEL_DIR = '/content/legal_case_model'
+MODEL_DIR = '/content/legal_case_model/content/legal_case_model'
 
 # Ensure upload directory exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -238,3 +238,4 @@ print(f"="*60 + "\n")
 
 if __name__ == '__main__':
     app.run(port=5000)
+
