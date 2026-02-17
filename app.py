@@ -17,21 +17,28 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # --- 2. LOAD DATASET FROM CSV ---
 print("📂 Loading legal dataset from CSV...")
 try:
-    # Read only first few rows to see what categories exist
-    df = pd.read_csv(CSV_PATH, nrows=1000)
-    
-    # Get unique legal categories from the dataset
-    # Assuming the CSV has a column like 'label', 'category', or 'class'
-    label_column = df.columns[-1]  # Usually last column is the label
-    
-    # Convert all labels to strings and remove any null/empty values
-    labels_raw = df[label_column].dropna().astype(str).unique().tolist()
-    
-    # Clean up labels - remove empty strings and convert to lowercase
+    candidate_columns = ["case_outcome", "label", "category", "class", "outcome", "target"]
+    all_columns = pd.read_csv(CSV_PATH, nrows=0).columns.tolist()
+
+    label_column = next((col for col in candidate_columns if col in all_columns), None)
+    if label_column is None:
+        label_column = all_columns[-1]
+
+    # Read only label column for robustness and speed
+    df_labels = pd.read_csv(
+        CSV_PATH,
+        usecols=[label_column],
+        nrows=5000,
+        engine="python",
+        on_bad_lines="skip"
+    )
+
+    labels_raw = df_labels[label_column].dropna().astype(str).unique().tolist()
     LABELS = sorted([label.strip().lower() for label in labels_raw if label.strip() and label.lower() != 'nan'])
-    
-    print(f"✅ Loaded {len(df)} samples from Kaggle dataset")
-    print(f"📊 Legal categories found: {LABELS}")
+
+    print(f"✅ Loaded label column: {label_column}")
+    print(f"📊 Number of categories: {len(LABELS)}")
+    print(f"📊 Sample categories: {LABELS[:10]}")
 except Exception as e:
     print(f"⚠️ Could not load CSV: {e}")
     print("🔄 Using default categories instead")
@@ -44,13 +51,27 @@ app = Flask(__name__)
 # It understands legal text and classifies it into categories
 device = 0 if torch.cuda.is_available() else -1
 print("🧠 Loading BERT AI model (this may take a minute)...")
-classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli", device=device)
+classifier = pipeline(
+    "zero-shot-classification", 
+    model="facebook/bart-large-mnli", 
+    device=device
+)
 print("✅ BERT model ready!")
+
+def safe_text_for_model(text, max_tokens=256):
+    if not text:
+        return ""
+    encoded = classifier.tokenizer(text, truncation=True, max_length=max_tokens)
+    return classifier.tokenizer.decode(encoded["input_ids"], skip_special_tokens=True)
 
 @app.route('/')
 def home():
     # This will look for templates/index.html
     return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return ('', 204)
 
 @app.route('/samples')
 def samples():
@@ -90,13 +111,15 @@ def predict():
     
     if not text:
         return jsonify({'error': 'No text provided'}), 400
-    
-    # Limit text to 4000 characters to avoid memory issues
-    text = text[:4000]
-    
-    # Use BERT AI to classify the legal text
-    # This is where the magic happens - BERT reads and understands the text
-    res = classifier(text, LABELS, multi_label=False)
+
+    safe_text = safe_text_for_model(text, max_tokens=256)
+
+    try:
+        # Use BERT AI to classify the legal text
+        res = classifier(safe_text, LABELS, multi_label=False, truncation=True, max_length=512)
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        return jsonify({'error': 'Prediction failed. Please try shorter text.'}), 500
     
     # Get the predicted category (like "cited", "applied", etc.)
     label = res['labels'][0].lower().strip()
@@ -139,8 +162,14 @@ def upload():
         if not extracted_text.strip():
             return jsonify({'error': 'Could not extract text from file'}), 400
 
-        # Now classify the extracted text using BERT
-        res = classifier(extracted_text[:4000], LABELS, multi_label=False)
+        safe_text = safe_text_for_model(extracted_text, max_tokens=256)
+
+        try:
+            # Now classify the extracted text using BERT
+            res = classifier(safe_text, LABELS, multi_label=False, truncation=True, max_length=512)
+        except Exception as e:
+            print(f"Classification error: {e}")
+            return jsonify({'error': 'Classification failed. Please try a smaller file.'}), 500
         
         # Get the predicted category
         label = res['labels'][0].lower().strip()
