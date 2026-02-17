@@ -195,5 +195,4 @@ This sends sample requests to the API and prints predicted labels + confidence.
 
 Built for legal NLP experimentation and academic project demonstration with transformer-based classification workflows.
 ```
-
-If you want, I can also generate a second version with GitHub badges (Python, Flask, Transformers, License, Last Commit) and a cleaner “for recruiters/professors” presentation style.
+ 
