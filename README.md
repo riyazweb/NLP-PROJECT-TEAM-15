@@ -1,6 +1,5 @@
  
-
-```markdown
+ 
 # ⚖️ Legal Text Classification System (BERT + Flask)
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)](https://www.python.org/)
@@ -47,8 +46,7 @@ Legal professionals often need to understand the "weight" of a precedent. This t
 └── static/             # (Optional) CSS/JS assets
 ```
 
----
-
+ 
 ## ⚙️ Installation & Setup
 
 ### 1. Clone & Environment
